@@ -1,0 +1,36 @@
+{
+  "name": "thread-func",
+  "version": "1.0.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dominicvonk/thread-func.git"
+  },
+  "description": "A simple library to run functions in a separate thread.",
+  "main": "dist/thread-func.js",
+  "type": "module",
+  "module": "dist/thread-func.js",
+  "types": "dist/thread-func.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "Dominic Vonk <dominic@vonk.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "serialize-error": "^11.0.3"
+  },
+  "files": [
+    "dist/*",
+    "README.md",
+    "package.json",
+    "package-lock.json"
+  ]
+}
