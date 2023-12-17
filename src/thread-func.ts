@@ -7,8 +7,7 @@ import { importThreadFunc } from './worker-thread/import-thread-func.js';
 import { importThreadPoolFunc } from './worker-thread/import-thread-pool-func.js';
 
 export function threadFunc<
-  Method extends (arg: Arg) => Promise<Result>,
-  Arg = Parameters<Method>[0],
+  Method extends (...arg: Parameters<Method>) => Promise<Result>,
   Result = Awaited<ReturnType<Method>>,
 >(
   fn: Method,
@@ -47,14 +46,14 @@ export function threadFunc<
 
     if (options?.variant === 'child_process') {
       if (options?.poolSize) {
-        const output = importChildProcessPoolFunc<Arg, Result, typeof fn>(
+        const output = importChildProcessPoolFunc<typeof fn, Result>(
           file,
           stackLine,
           options?.poolSize,
         );
         return output;
       } else {
-        const output = importChildProcessFunc<Arg, Result, typeof fn>(
+        const output = importChildProcessFunc<typeof fn, Result>(
           file,
           stackLine,
         );
@@ -63,23 +62,23 @@ export function threadFunc<
     }
 
     if (options?.poolSize) {
-      const output = importThreadPoolFunc<Arg, Result, typeof fn>(
+      const output = importThreadPoolFunc<typeof fn, Result>(
         file,
         stackLine,
         options?.poolSize,
       );
       return output;
     } else {
-      const output = importThreadFunc<Arg, Result, typeof fn>(file, stackLine);
+      const output = importThreadFunc<typeof fn, Result>(file, stackLine);
       return output;
     }
   }
 
   if (options?.variant === 'child_process') {
-    handleChildProcess<Arg, Result, typeof fn>(stackLine, fn);
+    handleChildProcess<typeof fn, Result>(stackLine, fn);
     return undefined as unknown as Method; // only used for type checking
   } else {
-    handleWorkerThreads<Arg, Result, typeof fn>(stackLine, fn);
+    handleWorkerThreads<typeof fn, Result>(stackLine, fn);
     return undefined as unknown as Method; // only used for type checking
   }
 }

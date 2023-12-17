@@ -3,12 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { deserializeError } from 'serialize-error';
 
 export function importChildProcessPoolFunc<
-  Arg,
+  Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
-  Method extends (arg: Arg) => Promise<Result>,
 >(file: string, identifier: string, maxWorkers = 2): Method {
-  return ((data: Arg): Promise<Result> => {
+  return ((...args: Parameters<Method>): Promise<Result> => {
     const childProcessPool: ChildProcess[] = [];
+    const data = args;
     return new Promise((resolve, reject) => {
       let childProcess: ChildProcess;
       if (childProcessPool.length < maxWorkers) {

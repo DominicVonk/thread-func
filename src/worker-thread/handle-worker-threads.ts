@@ -3,56 +3,56 @@ import { parentPort, workerData } from 'worker_threads';
 import { WithIdentifier } from '../types/with-identifier.js';
 
 export function handleWorkerThreads<
-  Arg,
+  Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
-  Method extends (arg: Arg) => Promise<Result>,
 >(identifier: string, fn: Method) {
   if (workerData) {
-    handleThread<Arg, Result, typeof fn>(identifier, fn);
+    handleThread<typeof fn, Result>(identifier, fn);
   } else {
-    handleThreadPool<Arg, Result, typeof fn>(identifier, fn);
+    handleThreadPool<typeof fn, Result>(identifier, fn);
   }
 }
 
 function handleThreadPool<
-  Arg,
+  Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
-  Method extends (arg: Arg) => Promise<Result>,
 >(identifier: string, fn: Method) {
-  parentPort?.on('message', async (message: WithIdentifier<Arg>) => {
-    try {
-      if (message.identifier !== identifier) {
-        return;
+  parentPort?.on(
+    'message',
+    async (message: WithIdentifier<Parameters<Method>>) => {
+      try {
+        if (message.identifier !== identifier) {
+          return;
+        }
+        const output = await fn(...message.data);
+        parentPort?.postMessage(
+          JSON.stringify({
+            identifier: message.identifier,
+            callIdentifier: message.callIdentifier,
+            data: output,
+          }),
+        );
+      } catch (e: unknown) {
+        parentPort?.postMessage(
+          JSON.stringify({
+            identifier: message.identifier,
+            callIdentifier: message.callIdentifier,
+            error: serializeError(e),
+          }),
+        );
       }
-      const output = await fn(message.data);
-      parentPort?.postMessage(
-        JSON.stringify({
-          identifier: message.identifier,
-          callIdentifier: message.callIdentifier,
-          data: output,
-        }),
-      );
-    } catch (e: unknown) {
-      parentPort?.postMessage(
-        JSON.stringify({
-          identifier: message.identifier,
-          callIdentifier: message.callIdentifier,
-          error: serializeError(e),
-        }),
-      );
-    }
-  });
+    },
+  );
 }
 
 function handleThread<
-  Arg,
+  Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
-  Method extends (arg: Arg) => Promise<Result>,
 >(identifier: string, fn: Method) {
   if (workerData && workerData.identifier === identifier) {
     (async () => {
       try {
-        const output = await fn(workerData.data);
+        const output = await fn(...workerData.data);
         parentPort?.postMessage(
           JSON.stringify({
             identifier,

@@ -3,12 +3,12 @@ import { deserializeError } from 'serialize-error';
 import { Worker } from 'worker_threads';
 
 export function importThreadPoolFunc<
-  Arg,
+  Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
-  Method extends (arg: Arg) => Promise<Result>,
 >(file: string, identifier: string, maxWorkers = 2): Method {
   const workerPool: Worker[] = [];
-  return ((data: Arg): Promise<Result> => {
+  return ((...args: Parameters<Method>): Promise<Result> => {
+    const data = args;
     let worker: Worker;
     if (workerPool.length < maxWorkers) {
       worker = new Worker(file);
