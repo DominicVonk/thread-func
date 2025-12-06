@@ -7,6 +7,7 @@ export function importDenoWorkerPoolFunc<
   Result,
 >(file: string, identifier: string, poolSize: number): Method {
   const workers: Worker[] = [];
+  const workerBusy: boolean[] = [];
   const pendingTasks: Array<{
     args: Parameters<Method>;
     resolve: (value: Result) => void;
@@ -18,6 +19,7 @@ export function importDenoWorkerPoolFunc<
     {
       resolve: (value: Result) => void;
       reject: (error: unknown) => void;
+      workerIndex: number;
     }
   >();
   
@@ -28,39 +30,48 @@ export function importDenoWorkerPoolFunc<
       name: 'worker',
     });
     
+    workerBusy[i] = false;
+    
     worker.onmessage = (event: MessageEvent) => {
       const { data, error, callIdentifier } = event.data;
       const task = activeTasks.get(callIdentifier);
       
       if (task) {
         activeTasks.delete(callIdentifier);
+        workerBusy[task.workerIndex] = false;
+        
         if (data !== undefined) {
           task.resolve(data);
         } else if (error) {
           task.reject(new Error(error.message || 'Worker error'));
         }
-      }
-      
-      // Process next pending task if any
-      const nextTask = pendingTasks.shift();
-      if (nextTask) {
-        activeTasks.set(nextTask.callIdentifier, {
-          resolve: nextTask.resolve,
-          reject: nextTask.reject,
-        });
-        worker.postMessage({
-          data: nextTask.args,
-          identifier,
-          callIdentifier: nextTask.callIdentifier,
-        });
+        
+        // Process next pending task if any
+        const nextTask = pendingTasks.shift();
+        if (nextTask) {
+          workerBusy[task.workerIndex] = true;
+          activeTasks.set(nextTask.callIdentifier, {
+            resolve: nextTask.resolve,
+            reject: nextTask.reject,
+            workerIndex: task.workerIndex,
+          });
+          worker.postMessage({
+            data: nextTask.args,
+            identifier,
+            callIdentifier: nextTask.callIdentifier,
+          });
+        }
       }
     };
     
     worker.onerror = (error) => {
-      // Reject all active tasks assigned to this worker
+      // Reject only tasks assigned to this worker
       for (const [callId, task] of activeTasks.entries()) {
-        task.reject(error);
-        activeTasks.delete(callId);
+        if (task.workerIndex === i) {
+          task.reject(error);
+          activeTasks.delete(callId);
+          workerBusy[i] = false;
+        }
       }
     };
     
@@ -72,13 +83,16 @@ export function importDenoWorkerPoolFunc<
       const callIdentifier = generateId();
       
       // Find an available worker
-      const availableWorker = workers.find(
-        (w) => activeTasks.size < poolSize,
-      );
+      const availableWorkerIndex = workerBusy.findIndex(busy => !busy);
       
-      if (availableWorker && activeTasks.size < poolSize) {
-        activeTasks.set(callIdentifier, { resolve, reject });
-        availableWorker.postMessage({
+      if (availableWorkerIndex !== -1) {
+        workerBusy[availableWorkerIndex] = true;
+        activeTasks.set(callIdentifier, { 
+          resolve, 
+          reject, 
+          workerIndex: availableWorkerIndex 
+        });
+        workers[availableWorkerIndex]!.postMessage({
           data: args,
           identifier,
           callIdentifier,

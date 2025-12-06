@@ -20,8 +20,7 @@ export function importDenoWorkerFunc<
         const { data, error } = event.data;
         if (data !== undefined) {
           resolve(data);
-        }
-        if (error) {
+        } else if (error) {
           reject(new Error(error.message || 'Worker error'));
         }
         worker.terminate();

@@ -41,7 +41,7 @@ export function threadFunc<
   let isInMainContext = false;
   if (runtime === 'deno') {
     // In Deno, check if we're NOT in a worker
-    isInMainContext = !(typeof self !== 'undefined' && 'name' in self && (self as any).name === 'worker');
+    isInMainContext = !(typeof self !== 'undefined' && 'name' in self && (self as {name?: string}).name === 'worker');
   } else {
     // For Node.js/Bun
     const envVar = typeof process !== 'undefined' ? process.env.IS_WORKER_THREAD : undefined;
