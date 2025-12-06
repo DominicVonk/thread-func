@@ -1,10 +1,14 @@
-import { isMainThread } from 'node:worker_threads';
+import { detectRuntime } from './runtime-detector.js';
+import { isMainThread } from './safe-worker-threads.js';
 import { handleChildProcess } from './child-process/handle-child-process.js';
 import { importChildProcessFunc } from './child-process/import-child-process-func.js';
 import { importChildProcessPoolFunc } from './child-process/import-child-process-pool-func.js';
 import { handleWorkerThreads } from './worker-thread/handle-worker-threads.js';
 import { importThreadFunc } from './worker-thread/import-thread-func.js';
 import { importThreadPoolFunc } from './worker-thread/import-thread-pool-func.js';
+import { handleDenoWorker } from './deno-worker/handle-deno-worker.js';
+import { importDenoWorkerFunc } from './deno-worker/import-deno-worker-func.js';
+import { importDenoWorkerPoolFunc } from './deno-worker/import-deno-worker-pool-func.js';
 
 export function threadFunc<
   Method extends (...arg: Parameters<Method>) => Promise<Result>,
@@ -16,6 +20,7 @@ export function threadFunc<
     variant?: 'worker_threads' | 'child_process';
   } = {},
 ): Method {
+  const runtime = detectRuntime();
   const defaultOptions: typeof options = {
     variant: 'worker_threads',
   };
@@ -32,53 +37,89 @@ export function threadFunc<
     throw new Error('Could not determine file');
   }
 
-  if (isMainThread && !process.env.IS_WORKER_THREAD) {
-    // determine file where this function is called
+  // Check if we're in main thread/process
+  let isInMainContext = false;
+  if (runtime === 'deno') {
+    // In Deno, check if we're NOT in a worker
+    isInMainContext = !(typeof self !== 'undefined' && 'name' in self && (self as any).name === 'worker');
+  } else {
+    // For Node.js/Bun
+    const envVar = typeof process !== 'undefined' ? process.env.IS_WORKER_THREAD : undefined;
+    isInMainContext = isMainThread && envVar !== 'true';
+  }
 
+  if (isInMainContext) {
+    // Main thread/process - determine file where this function is called
     const stackLineArr = stackLine.split(' ');
     if (!stackLineArr[stackLineArr.length - 1]) {
       throw new Error('Could not determine file');
     }
     const fileComplete = stackLineArr[stackLineArr.length - 1]!;
     const fileURL = fileComplete.substring(0, fileComplete.indexOf(':', 6));
-    const file = new URL(import.meta.resolve(new URL(fileURL).pathname))
-      .pathname;
+    
+    let file: string;
+    if (runtime === 'deno') {
+      // For Deno, use the file URL directly
+      file = fileURL;
+    } else {
+      // For Node.js and Bun
+      // fileURL should already be a valid file:// URL or absolute path
+      if (fileURL.startsWith('file://')) {
+        file = new URL(fileURL).pathname;
+      } else {
+        // If it's already a path, resolve it
+        file = fileURL;
+      }
+    }
 
-    if (options?.variant === 'child_process') {
+    // Handle Deno
+    if (runtime === 'deno') {
       if (options?.poolSize) {
-        const output = importChildProcessPoolFunc<typeof fn, Result>(
+        return importDenoWorkerPoolFunc<typeof fn, Result>(
           file,
           stackLine,
           options?.poolSize,
         );
-        return output;
       } else {
-        const output = importChildProcessFunc<typeof fn, Result>(
+        return importDenoWorkerFunc<typeof fn, Result>(file, stackLine);
+      }
+    }
+
+    // Handle Node.js/Bun
+    if (options?.variant === 'child_process') {
+      if (options?.poolSize) {
+        return importChildProcessPoolFunc<typeof fn, Result>(
           file,
           stackLine,
+          options?.poolSize,
         );
-        return output;
+      } else {
+        return importChildProcessFunc<typeof fn, Result>(file, stackLine);
       }
     }
 
     if (options?.poolSize) {
-      const output = importThreadPoolFunc<typeof fn, Result>(
+      return importThreadPoolFunc<typeof fn, Result>(
         file,
         stackLine,
         options?.poolSize,
       );
-      return output;
     } else {
-      const output = importThreadFunc<typeof fn, Result>(file, stackLine);
-      return output;
+      return importThreadFunc<typeof fn, Result>(file, stackLine);
     }
+  }
+
+  // Worker/child process context - setup message handlers
+  if (runtime === 'deno') {
+    handleDenoWorker<typeof fn, Result>(stackLine, fn);
+    return undefined as unknown as Method;
   }
 
   if (options?.variant === 'child_process') {
     handleChildProcess<typeof fn, Result>(stackLine, fn);
-    return undefined as unknown as Method; // only used for type checking
+    return undefined as unknown as Method;
   } else {
     handleWorkerThreads<typeof fn, Result>(stackLine, fn);
-    return undefined as unknown as Method; // only used for type checking
+    return undefined as unknown as Method;
   }
 }

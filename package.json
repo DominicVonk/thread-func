@@ -5,11 +5,18 @@
     "type": "git",
     "url": "git+https://github.com/dominicvonk/thread-func.git"
   },
-  "description": "A simple library to run functions in a separate thread.",
+  "description": "A simple library to run functions in a separate thread. Supports Node.js, Deno, and Bun.",
   "main": "dist/thread-func.js",
   "type": "module",
   "module": "dist/thread-func.js",
   "types": "dist/thread-func.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/thread-func.d.ts",
+      "import": "./dist/thread-func.js",
+      "default": "./dist/thread-func.js"
+    }
+  },
   "scripts": {
     "build": "tsc"
   },
@@ -31,6 +38,7 @@
     "dist/*",
     "README.md",
     "package.json",
-    "package-lock.json"
+    "package-lock.json",
+    "deno.json"
   ]
 }

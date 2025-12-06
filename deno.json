@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.worker"],
+    "strict": true
+  },
+  "imports": {
+    "serialize-error": "npm:serialize-error@11.0.3"
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-write --allow-net"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
