@@ -10,6 +10,14 @@ import { handleDenoWorker } from './deno-worker/handle-deno-worker.js';
 import { importDenoWorkerFunc } from './deno-worker/import-deno-worker-func.js';
 import { importDenoWorkerPoolFunc } from './deno-worker/import-deno-worker-pool-func.js';
 
+function isDenoWorkerContext(): boolean {
+  return (
+    typeof self !== 'undefined' &&
+    'name' in self &&
+    (self as { name?: string }).name === 'worker'
+  );
+}
+
 export function threadFunc<
   Method extends (...arg: Parameters<Method>) => Promise<Result>,
   Result = Awaited<ReturnType<Method>>,
@@ -41,7 +49,7 @@ export function threadFunc<
   let isInMainContext = false;
   if (runtime === 'deno') {
     // In Deno, check if we're NOT in a worker
-    isInMainContext = !(typeof self !== 'undefined' && 'name' in self && (self as {name?: string}).name === 'worker');
+    isInMainContext = !isDenoWorkerContext();
   } else {
     // For Node.js/Bun
     const envVar = typeof process !== 'undefined' ? process.env.IS_WORKER_THREAD : undefined;
@@ -63,11 +71,17 @@ export function threadFunc<
       file = fileURL;
     } else {
       // For Node.js and Bun
-      // fileURL should already be a valid file:// URL or absolute path
+      // Handle both file:// URLs and absolute paths
       if (fileURL.startsWith('file://')) {
-        file = new URL(fileURL).pathname;
+        // Convert file:// URL to path, handling Windows paths correctly
+        const url = new URL(fileURL);
+        file = url.pathname;
+        // On Windows, pathname starts with / (e.g., /C:/path), remove leading slash
+        if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(file)) {
+          file = file.substring(1);
+        }
       } else {
-        // If it's already a path, resolve it
+        // If it's already a path, use it directly
         file = fileURL;
       }
     }

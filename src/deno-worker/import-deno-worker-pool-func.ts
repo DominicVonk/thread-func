@@ -92,6 +92,7 @@ export function importDenoWorkerPoolFunc<
           reject, 
           workerIndex: availableWorkerIndex 
         });
+        // availableWorkerIndex is guaranteed valid from findIndex !== -1 check above
         workers[availableWorkerIndex]!.postMessage({
           data: args,
           identifier,

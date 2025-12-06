@@ -27,7 +27,8 @@ const loadWorkerThreads = async () => {
   }
 };
 
-// Call it immediately
+// Call it immediately at module load time
+// This ensures worker_threads state is initialized before any Worker construction occurs
 await loadWorkerThreads();
 
 export { isMainThread, workerData, parentPort, workerThreadsAvailable };

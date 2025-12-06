@@ -1,4 +1,4 @@
-//  Example: Using child_process variant (Node.js/Bun only)
+// Example: Using child_process variant (Node.js/Bun only)
 import { threadFunc } from 'thread-func';
 
 // Use child_process instead of worker_threads
