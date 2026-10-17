@@ -1,5 +1,5 @@
 import { detectRuntime } from './runtime-detector.js';
-import { isMainThread } from './safe-worker-threads.js';
+import { workerData } from './safe-worker-threads.js';
 import { handleChildProcess } from './child-process/handle-child-process.js';
 import { importChildProcessFunc } from './child-process/import-child-process-func.js';
 import { importChildProcessPoolFunc } from './child-process/import-child-process-pool-func.js';
@@ -52,8 +52,14 @@ export function threadFunc<
     isInMainContext = !isDenoWorkerContext();
   } else {
     // For Node.js/Bun
-    const envVar = typeof process !== 'undefined' ? process.env.IS_WORKER_THREAD : undefined;
-    isInMainContext = isMainThread && envVar !== 'true';
+    const envVar =
+      typeof process !== 'undefined' ? process.env.IS_WORKER_THREAD : undefined;
+    const isLibraryWorker =
+      typeof workerData === 'object' &&
+      workerData !== null &&
+      'threadFuncWorker' in workerData &&
+      workerData.threadFuncWorker === true;
+    isInMainContext = !isLibraryWorker && envVar !== 'true';
   }
 
   if (isInMainContext) {
@@ -64,7 +70,7 @@ export function threadFunc<
     }
     const fileComplete = stackLineArr[stackLineArr.length - 1]!;
     const fileURL = fileComplete.substring(0, fileComplete.indexOf(':', 6));
-    
+
     let file: string;
     if (runtime === 'deno') {
       // For Deno, use the file URL directly

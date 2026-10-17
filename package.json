@@ -18,7 +18,10 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "npm run build && npm run test:vitest && npm run test:runtime",
+    "test:vitest": "tsc -p tsconfig.fixtures.json && tsc -p tsconfig.tests.json && vitest run --pool=threads && vitest run --pool=forks",
+    "test:runtime": "node tests/test.mjs"
   },
   "author": "Dominic Vonk <dominic@vonk.io>",
   "license": "MIT",
@@ -29,7 +32,8 @@
     "eslint": "^8.55.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.1.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "serialize-error": "^11.0.3"

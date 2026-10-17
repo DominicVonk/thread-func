@@ -5,6 +5,7 @@ This directory contains example files demonstrating how to use thread-func with 
 ## Running the Examples
 
 ### Node.js
+
 ```bash
 # First, build the project
 npm run build
@@ -16,15 +17,20 @@ npx tsx examples/basic-example.ts
 ```
 
 ### Bun
+
 ```bash
 bun run examples/basic-example.ts
 ```
 
 ### Deno
+
 ```bash
 # For Deno, you would typically import from npm:
 deno run --allow-all examples/basic-example.ts
 ```
+
+Worker functions live in separate `*-worker.ts` modules so workers do not rerun
+the example entry point. Use this pattern in your own application too.
 
 ## Available Examples
 

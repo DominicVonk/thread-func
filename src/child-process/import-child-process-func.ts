@@ -18,11 +18,10 @@ export function importChildProcessFunc<
       worker.send({ data, identifier });
       worker.once('message', (message: string) => {
         const { data, error } = JSON.parse(message);
-        if (data) {
-          resolve(data);
-        }
         if (error) {
           reject(deserializeError(error));
+        } else {
+          resolve(data);
         }
         worker.kill();
       });

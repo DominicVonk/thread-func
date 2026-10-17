@@ -6,7 +6,7 @@ export function handleWorkerThreads<
   Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
 >(identifier: string, fn: Method) {
-  if (workerData) {
+  if (workerData?.identifier !== undefined) {
     handleThread<typeof fn, Result>(identifier, fn);
   } else {
     handleThreadPool<typeof fn, Result>(identifier, fn);

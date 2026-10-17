@@ -11,7 +11,7 @@ export function importThreadPoolFunc<
     const data = args;
     let worker: Worker;
     if (workerPool.length < maxWorkers) {
-      worker = new Worker(file);
+      worker = new Worker(file, { workerData: { threadFuncWorker: true } });
       worker.setMaxListeners(0);
       workerPool.push(worker);
     } else {
@@ -32,11 +32,10 @@ export function importThreadPoolFunc<
       worker.once('message', function event(message: string) {
         const { callIdentifier, data, error } = JSON.parse(message);
         if (callIdentifier === currentCallIdentifier) {
-          if (data) {
-            resolve(data);
-          }
           if (error) {
             reject(deserializeError(error));
+          } else {
+            resolve(data);
           }
           if (worker.listenerCount('message') === 0) {
             workerPool.splice(workerPool.indexOf(worker), 1);

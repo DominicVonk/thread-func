@@ -8,24 +8,24 @@ export function importDenoWorkerFunc<
         type: 'module',
         name: 'worker',
       });
-      
+
       // Send the task to the worker
       worker.postMessage({
         data: args,
         identifier,
         callIdentifier: undefined,
       });
-      
+
       worker.onmessage = (event: MessageEvent) => {
         const { data, error } = event.data;
-        if (data !== undefined) {
-          resolve(data);
-        } else if (error) {
+        if (error) {
           reject(new Error(error.message || 'Worker error'));
+        } else {
+          resolve(data);
         }
         worker.terminate();
       };
-      
+
       worker.onerror = (error) => {
         reject(error);
         worker.terminate();

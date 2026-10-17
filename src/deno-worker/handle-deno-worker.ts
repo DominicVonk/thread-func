@@ -7,13 +7,13 @@ export function handleDenoWorker<
 >(identifier: string, fn: Method) {
   // Check if we're in a Deno worker context
   if (typeof self !== 'undefined' && self.name === 'worker') {
-    self.onmessage = async (event: MessageEvent) => {
+    self.addEventListener('message', async (event: MessageEvent) => {
       const message = event.data as WithIdentifier<Parameters<Method>>;
-      
+
       if (message.identifier !== identifier) {
         return;
       }
-      
+
       try {
         const output = await fn(...message.data);
         self.postMessage({
@@ -28,6 +28,6 @@ export function handleDenoWorker<
           error: serializeError(e),
         });
       }
-    };
+    });
   }
 }

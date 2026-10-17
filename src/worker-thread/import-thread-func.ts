@@ -8,15 +8,14 @@ export function importThreadFunc<
   return ((...args: Parameters<Method>): Promise<Result> => {
     return new Promise((resolve, reject) => {
       const worker = new Worker(file, {
-        workerData: { data: args, identifier },
+        workerData: { threadFuncWorker: true, data: args, identifier },
       });
       worker.once('message', (message: string) => {
         const { data, error } = JSON.parse(message);
-        if (data) {
-          resolve(data);
-        }
         if (error) {
           reject(deserializeError(error));
+        } else {
+          resolve(data);
         }
         worker.terminate();
       });

@@ -7,7 +7,7 @@
     "serialize-error": "npm:serialize-error@11.0.3"
   },
   "tasks": {
-    "test": "deno test --allow-read --allow-write --allow-net"
+    "test": "deno run -A tests/test.mjs"
   },
   "fmt": {
     "useTabs": false,

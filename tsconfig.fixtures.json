@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "tests/fixtures",
+    "outDir": "tests/fixtures-dist"
+  },
+  "include": ["tests/fixtures/**/*.ts"]
+}

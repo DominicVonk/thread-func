@@ -22,30 +22,30 @@ export function importDenoWorkerPoolFunc<
       workerIndex: number;
     }
   >();
-  
+
   // Initialize worker pool
   for (let i = 0; i < poolSize; i++) {
     const worker = new Worker(file, {
       type: 'module',
       name: 'worker',
     });
-    
+
     workerBusy[i] = false;
-    
+
     worker.onmessage = (event: MessageEvent) => {
       const { data, error, callIdentifier } = event.data;
       const task = activeTasks.get(callIdentifier);
-      
+
       if (task) {
         activeTasks.delete(callIdentifier);
         workerBusy[task.workerIndex] = false;
-        
-        if (data !== undefined) {
-          task.resolve(data);
-        } else if (error) {
+
+        if (error) {
           task.reject(new Error(error.message || 'Worker error'));
+        } else {
+          task.resolve(data);
         }
-        
+
         // Process next pending task if any
         const nextTask = pendingTasks.shift();
         if (nextTask) {
@@ -63,7 +63,7 @@ export function importDenoWorkerPoolFunc<
         }
       }
     };
-    
+
     worker.onerror = (error) => {
       // Reject only tasks assigned to this worker
       for (const [callId, task] of activeTasks.entries()) {
@@ -74,23 +74,23 @@ export function importDenoWorkerPoolFunc<
         }
       }
     };
-    
+
     workers.push(worker);
   }
-  
+
   return ((...args: Parameters<Method>): Promise<Result> => {
     return new Promise((resolve, reject) => {
       const callIdentifier = generateId();
-      
+
       // Find an available worker
-      const availableWorkerIndex = workerBusy.findIndex(busy => !busy);
-      
+      const availableWorkerIndex = workerBusy.findIndex((busy) => !busy);
+
       if (availableWorkerIndex !== -1) {
         workerBusy[availableWorkerIndex] = true;
-        activeTasks.set(callIdentifier, { 
-          resolve, 
-          reject, 
-          workerIndex: availableWorkerIndex 
+        activeTasks.set(callIdentifier, {
+          resolve,
+          reject,
+          workerIndex: availableWorkerIndex,
         });
         // availableWorkerIndex is guaranteed valid from findIndex !== -1 check above
         workers[availableWorkerIndex]!.postMessage({
