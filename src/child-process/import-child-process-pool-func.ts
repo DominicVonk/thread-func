@@ -6,8 +6,8 @@ export function importChildProcessPoolFunc<
   Method extends (...args: Parameters<Method>) => Promise<Result>,
   Result,
 >(file: string, identifier: string, maxWorkers = 2): Method {
+  const childProcessPool: ChildProcess[] = [];
   return ((...args: Parameters<Method>): Promise<Result> => {
-    const childProcessPool: ChildProcess[] = [];
     const data = args;
     return new Promise((resolve, reject) => {
       let childProcess: ChildProcess;
@@ -38,13 +38,15 @@ export function importChildProcessPoolFunc<
       childProcess.once('message', function event(message: string) {
         const { data, error, callIdentifier } = JSON.parse(message);
         if (callIdentifier === currentCallIdentifier) {
-          if (data) {
-            resolve(data);
-          }
           if (error) {
             reject(deserializeError(error));
+          } else {
+            resolve(data);
           }
-          childProcess.kill();
+          if (childProcess.listenerCount('message') === 0) {
+            childProcessPool.splice(childProcessPool.indexOf(childProcess), 1);
+            childProcess.kill();
+          }
         } else {
           childProcess.once('message', event);
         }
